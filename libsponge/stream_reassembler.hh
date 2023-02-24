@@ -3,17 +3,22 @@
 
 #include "byte_stream.hh"
 
+#include <cstddef>
 #include <cstdint>
+#include <list>
 #include <string>
+#include <unordered_map>
 
 //! \brief A class that assembles a series of excerpts from a byte stream (possibly out of order,
 //! possibly overlapping) into an in-order byte stream.
 class StreamReassembler {
   private:
     // Your code here -- add private members as necessary.
-
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
+    std::list<std::pair<size_t, std::string>> _stored;
+    size_t _expect_index;
+    size_t _eof_index;
 
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
