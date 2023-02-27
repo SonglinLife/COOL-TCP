@@ -13,7 +13,7 @@ class WrappingInt32 {
   public:
     //! Construct from a raw 32-bit unsigned integer
     explicit WrappingInt32(uint32_t raw_value) : _raw_value(raw_value) {}
-
+    
     uint32_t raw_value() const { return _raw_value; }  //!< Access raw stored value
 };
 

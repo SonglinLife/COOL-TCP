@@ -6,8 +6,38 @@
 #include "tcp_segment.hh"
 #include "wrapping_integers.hh"
 
+#include <cstdint>
 #include <functional>
+#include <list>
 #include <queue>
+#include <string>
+
+class TCPSenderTimer {
+  public:
+    uint64_t _start_time;
+    uint64_t _rto;
+    uint64_t _initial_retransmission_timeout;
+    bool _expired{false};
+    explicit TCPSenderTimer(uint64_t start, uint32_t rto)
+        : _start_time(start), _rto(rto), _initial_retransmission_timeout(rto) {}
+    bool check_if_expired(uint64_t current_time) noexcept {
+        if (current_time - _start_time >= _rto) {
+            _expired = true;
+        }
+        return _expired;
+    }
+    bool is_expired() const noexcept { return _expired; }
+    void retrans(uint64_t current_time) noexcept {
+        _start_time = current_time;
+        _expired = false;
+    }
+    void double_rto() { _rto *= 2; }
+    void reset(uint64_t current_time) noexcept {
+        _start_time = current_time;
+        _rto = _initial_retransmission_timeout;
+        _expired = false;
+    }
+};
 
 //! \brief The "sender" part of a TCP implementation.
 
@@ -31,6 +61,21 @@ class TCPSender {
 
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
+
+    // our defined
+    uint64_t _win_sz{1};
+    uint64_t _left_win_sz{1};
+
+    std::list<TCPSegment> _store{};
+
+    uint64_t _current_time{0};
+    TCPSenderTimer _timer;
+
+    WrappingInt32 _last_ackno;
+    uint64_t _consecutive_retransmissions_cnt{0};
+    bool _fin_sent{false};
+
+    std::string shrink_str{};
 
   public:
     //! Initialize a TCPSender
