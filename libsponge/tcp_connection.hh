@@ -5,6 +5,26 @@
 #include "tcp_receiver.hh"
 #include "tcp_sender.hh"
 #include "tcp_state.hh"
+#include "wrapping_integers.hh"
+
+#include <iostream>
+#define DEBUGPRINT false
+template <typename T>
+void DebugPrint(T &&t) {
+    if (!DEBUGPRINT) {
+        return;
+    }
+    std::cout << t << std::endl;
+}
+
+template <typename T, typename... Targs>
+void DebugPrint(T &&t, Targs &&...args) {
+    if (!DEBUGPRINT) {
+        return;
+    }
+    std::cout << t << " ";
+    DebugPrint(std::forward<Targs>(args)...);
+}
 
 //! \brief A complete endpoint of a TCP connection
 class TCPConnection {
@@ -21,10 +41,18 @@ class TCPConnection {
     //! in case the remote TCPConnection doesn't know we've received its whole stream?
     bool _linger_after_streams_finish{true};
 
+    bool _lived{true};
+    bool _end_input{false};
+
+    size_t _current_time{0};
+    size_t _last_rev_seg_time{0};
+
   public:
     //! \name "Input" interface for the writer
     //!@{
 
+    //! \brief fill segments_out queue from _sender
+    size_t pull_sender_push_segment(); 
     //! \brief Initiate a connection by sending a SYN segment
     void connect();
 

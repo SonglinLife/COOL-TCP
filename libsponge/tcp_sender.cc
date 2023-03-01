@@ -45,6 +45,7 @@ void TCPSender::fill_window() {
         Buffer payload(std::move(read_str));
         _left_win_sz -= payload.size();
         if (_stream.eof() && _left_win_sz && !_fin_sent) {
+            // make sure we only send fin once
             header.fin = true;
             _fin_sent = true;
             _left_win_sz--;
@@ -68,7 +69,7 @@ void TCPSender::fill_window() {
 //! \param ackno The remote receiver's ackno (acknowledgment number)
 //! \param window_size The remote receiver's advertised window size
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
-    if (unwrap(ackno, _isn, _next_seqno) < unwrap(_last_ackno, _isn, _next_seqno) && window_size <= _win_sz) {
+    if (unwrap(ackno, _isn, _next_seqno) <= unwrap(_last_ackno, _isn, _next_seqno) && window_size <= _win_sz) {
         // it was a out-time ack
         return;
     }
@@ -92,10 +93,10 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
             // i would insert seg in Sequence
         } else {
             store_sz += seg.payload().size();
-            tmp_list.push_back(cur);
+            tmp_list.push_back(std::move(cur));
         }
     }
-    _store.swap(tmp_list);
+    _store = std::move(tmp_list);
     if (store_sz > _win_sz) {
         // my store segs have not been cusumed
         return;
@@ -114,18 +115,18 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
 void TCPSender::tick(const size_t ms_since_last_tick) {
     _current_time += ms_since_last_tick;
     if (_timer.check_if_expired(_current_time)) {
+        _timer.retrans(_current_time);
         if (!_store.empty()) {
             auto seg = _store.front();
             _segments_out.push(seg);
-            _timer.retrans(_current_time);
             if (_win_sz != 0) {
                 _consecutive_retransmissions_cnt += 1;
                 _timer.double_rto();
             }
         }
     }
-
-    fill_window();
+    if (_next_seqno != 0)
+        fill_window();
 }
 
 unsigned int TCPSender::consecutive_retransmissions() const { return _consecutive_retransmissions_cnt; }
@@ -134,6 +135,9 @@ void TCPSender::send_empty_segment() {
     TCPHeader header;
     Buffer payload;
     header.seqno = _last_ackno;
+    /* if (unwrap(_last_ackno, _isn, _next_seqno) == 0) { */
+    /*     header.syn = true; */
+    /* } */
     TCPSegment seg;
     seg.header() = header;
     seg.payload() = payload;
