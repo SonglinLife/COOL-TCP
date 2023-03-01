@@ -27,6 +27,7 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
     /* DUMMY_CODE(data, index, eof); */
     if (eof) {
         _eof_index = index + data.size();
+        // we need to save eof index
     }
     std::vector<size_t> need_merge_range{index, index + data.size()};
     std::string need_merge_string(data);
@@ -36,7 +37,6 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         auto cur_end = iter->second.size() + iter->first;
         if (need_merge_range.empty() || cur_end < need_merge_range[0]) {
             tmp.push_back(std::move(*iter));
-            continue;
         } else if (cur_start > need_merge_range[1]) {
             tmp.push_back(std::pair{need_merge_range[0], std::move(need_merge_string)});
             tmp.push_back(std::move(*iter));
@@ -44,8 +44,8 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         } else {
             auto len1 = need_merge_range[0] > cur_start ? need_merge_range[0] - cur_start : static_cast<size_t>(0);
             auto len2 = need_merge_range[1] < cur_end ? cur_end - need_merge_range[1] : static_cast<size_t>(0);
-            need_merge_string = iter->second.substr(0, len1) + need_merge_string;
-            need_merge_string = need_merge_string + iter->second.substr(iter->second.size() - len2, len2);
+            need_merge_string = iter->second.substr(0, len1) + std::move(need_merge_string);
+            need_merge_string += iter->second.substr(iter->second.size() - len2, len2);
 
             need_merge_range[0] = std::min(need_merge_range[0], cur_start);
             need_merge_range[1] = std::max(need_merge_range[1], cur_end);
@@ -55,7 +55,6 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         tmp.push_back({need_merge_range[0], std::move(need_merge_string)});
     }
     _stored = std::move(tmp);
-
     // append
     while (!_stored.empty()) {
         auto store_front = _stored.front();
