@@ -1,4 +1,5 @@
 #include "socket.hh"
+#include "tcp_sponge_socket.hh"
 #include "util.hh"
 
 #include <cstdlib>
@@ -18,7 +19,7 @@ void get_URL(const string &host, const string &path) {
     // (not just one call to read() -- everything) until you reach
     // the "eof" (end of file).
     const Address URL_webaddr{host, "http"};
-    TCPSocket URL_socket{};
+    FullStackSocket URL_socket{};
     URL_socket.connect(URL_webaddr);
     std::ostringstream str_writer{};
     str_writer << "GET " << path << " HTTP/1.1\r\n"
@@ -61,4 +62,3 @@ int main(int argc, char *argv[]) {
 
     return EXIT_SUCCESS;
 }
-

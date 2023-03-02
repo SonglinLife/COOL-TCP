@@ -43,26 +43,26 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
     }
     auto unacceptable_abs_seqno = stream_out().bytes_written() + _capacity;
     if (payload_abs_seqno > unacceptable_abs_seqno) {
-      // make sure the unacceptable_abs_seqno - unassembler_abs_seqno <= _capacity; 
-      // I think it was unnecessrary, but the lab doc froce me to do that.
+        // make sure the unacceptable_abs_seqno - unassembler_abs_seqno <= _capacity;
+        // I think it was unnecessrary, but the lab doc froce me to do that.
         return;
     }
 
     size_t index = header.syn ? seg_abs_seqno : seg_abs_seqno - 1;
 
-    _reassembler.push_substring(payload.copy(), index, header.fin);
+    _reassembler.push_substring(std::string(payload.str()), index, header.fin);
     auto &out_bytes = _reassembler.stream_out();
     auto received_sz = out_bytes.bytes_written();
     _next_abs_seqno = received_sz + 1;
     if (stream_out().input_ended()) {
-      // the fin bit also occupy a seqno
+        // the fin bit also occupy a seqno
         _next_abs_seqno++;
     }
 }
 
 optional<WrappingInt32> TCPReceiver::ackno() const {
     if (!_next_abs_seqno) {
-      // no syn seg, in state listen, waiting for SYN, ackno is empty
+        // no syn seg, in state listen, waiting for SYN, ackno is empty
         return {};
     }
     auto ackno = wrap(_next_abs_seqno, _sender_isn);
