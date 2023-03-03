@@ -3,9 +3,22 @@
 
 #include "network_interface.hh"
 
+#include <cstdint>
+#include <list>
 #include <optional>
 #include <queue>
 
+struct RouteEntry {
+    uint32_t _mask;
+    uint32_t _ip;
+    std::optional<uint32_t> _next_hop;
+    explicit RouteEntry(uint32_t mask, uint32_t ip, std::optional<uint32_t> next_hop)
+        : _mask(mask), _ip(ip), _next_hop(next_hop) {}
+    friend bool operator == (const RouteEntry& a, const RouteEntry& b){
+      return a._mask == b._mask && a._ip == b._ip;
+    }
+};
+using RouterTable = std::list<RouteEntry>;
 //! \brief A wrapper for NetworkInterface that makes the host-side
 //! interface asynchronous: instead of returning received datagrams
 //! immediately (from the `recv_frame` method), it stores them for
@@ -48,6 +61,8 @@ class Router {
     //! as specified by the route with the longest prefix_length that matches the
     //! datagram's destination address.
     void route_one_datagram(InternetDatagram &dgram);
+    RouterTable _router_tabe{};
+       mach_router_table();
 
   public:
     //! Add an interface to the router
