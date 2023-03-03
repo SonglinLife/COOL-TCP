@@ -1,6 +1,10 @@
 #include "router.hh"
 
+#include "address.hh"
+
+#include <cstdint>
 #include <iostream>
+#include <limits>
 
 using namespace std;
 
@@ -16,7 +20,7 @@ using namespace std;
 // You will need to add private members to the class declaration in `router.hh`
 
 template <typename... Targs>
-void DUMMY_CODE(Targs &&... /* unused */) {}
+void DUMMY_CODE(Targs &&.../* unused */) {}
 
 //! \param[in] route_prefix The "up-to-32-bit" IPv4 address prefix to match the datagram's destination address against
 //! \param[in] prefix_length For this route to be applicable, how many high-order (most-significant) bits of the route_prefix will need to match the corresponding bits of the datagram's destination address?
@@ -28,27 +32,67 @@ void Router::add_route(const uint32_t route_prefix,
                        const size_t interface_num) {
     cerr << "DEBUG: adding route " << Address::from_ipv4_numeric(route_prefix).ip() << "/" << int(prefix_length)
          << " => " << (next_hop.has_value() ? next_hop->ip() : "(direct)") << " on interface " << interface_num << "\n";
-    
+    constexpr auto raw_mask = std::numeric_limits<uint32_t>::max();
+    auto mask = raw_mask << (32 - prefix_length);
 
-    DUMMY_CODE(route_prefix, prefix_length, next_hop, interface_num);
-    // Your code here.
+    auto entry = RouteEntry(route_prefix & mask, mask, next_hop, interface_num);
+    auto best_match_iter = match_router_table(entry._ip);
+    if (best_match_iter == _router_table.end()) {
+        _router_table.push_back(entry);
+        return;
+    }
+    if (best_match_iter->_mask < entry._mask) {
+        _router_table.push_back(entry);
+        return;
+    }
 }
 
 //! \param[in] dgram The datagram to be routed
 void Router::route_one_datagram(InternetDatagram &dgram) {
     DUMMY_CODE(dgram);
     // Your code here.
+    if (dgram.header().ttl <= 1) {
+        return;
+    }
+    auto best_match_iter = match_router_table(dgram.header().dst);
+    if (best_match_iter == _router_table.end()) {
+        return;
+    }
+    auto interface_num = best_match_iter->_interface_num;
+    auto send_to = interface(interface_num);
+    std::cerr << " send to _interface_num " << interface_num;
+    if (best_match_iter->_next_hop.has_value()) {
+        std::cerr << " next_hop: " << best_match_iter->_next_hop.value();
+        send_to.send_datagram(dgram, best_match_iter->_next_hop.value());
+    } else {
+        std::cerr << " direct: " << Address::from_ipv4_numeric(dgram.header().dst).ip();
+        send_to.send_datagram(dgram, Address::from_ipv4_numeric(dgram.header().dst));
+    }
 }
 
 void Router::route() {
     // Go through all the interfaces, and route every incoming datagram to its proper outgoing interface.
+    auto cnt = 0;
     for (auto &interface : _interfaces) {
         auto &queue = interface.datagrams_out();
         while (not queue.empty()) {
+            cerr << "rout from " <<cnt<< endl;
             route_one_datagram(queue.front());
             queue.pop();
         }
+        cnt++;
     }
 }
 
-auto Router::
+RouterTable::const_iterator Router::match_router_table(uint32_t ip) const {
+    uint32_t best_match_mask = 0;
+    auto best_match_iter = _router_table.end();
+    for (auto iter = _router_table.begin(); iter != _router_table.end(); ++iter) {
+        auto entry = *iter;
+        if (entry.match(ip) && entry._mask >= best_match_mask) {
+            best_match_mask = entry._mask;
+            best_match_iter = iter;
+        }
+    }
+    return best_match_iter;
+}

@@ -110,6 +110,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
     auto eth_type = frame.header().type;
     auto eth_dst = frame.header().dst;
     auto eth_src = frame.header().src;
+    std::cerr << "form ip " << _ip_address.ip();
 
     if (eth_type == EthernetHeader::TYPE_IPv4 && eth_dst == _ethernet_address) {
         InternetDatagram ipv4_frame;
@@ -118,6 +119,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
             std::cerr << "parse ip wrong!\n";
             return {};
         }
+        cerr << " was ip frame" << endl;
         /* if (ipv4_frame.header().dst != _ip_address.ipv4_numeric()) { */
         /*     return {}; */
         /* } */
@@ -129,13 +131,15 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
         auto res = arp_msg.parse(frame.payload().concatenate());
         if (res != ParseResult::NoError) {
             std::cerr << "parse arp wrong!\n";
+            return {};
         }
+        cerr << " was arp sender_ip " << arp_msg.sender_ip_address;
+        cerr << " type: " << arp_msg.opcode << endl;
         _arp_cache[arp_msg.sender_ip_address] = eth_src;
         _arp_cache_time[arp_msg.sender_ip_address] = _current_time;
 
         if (arp_msg.opcode == ARPMessage::OPCODE_REQUEST && arp_msg.target_ip_address == _ip_address.ipv4_numeric()) {
             // need reply
-
             EthernetFrame eth_frame;
             ostringstream ostr;
             ostringstream arp_ostr;
