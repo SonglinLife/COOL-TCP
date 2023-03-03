@@ -1,11 +1,33 @@
 #ifndef SPONGE_LIBSPONGE_ROUTER_HH
 #define SPONGE_LIBSPONGE_ROUTER_HH
 
+#include "address.hh"
 #include "network_interface.hh"
 
+#include <cstdint>
+#include <list>
 #include <optional>
 #include <queue>
 
+class RouteEntry {
+  public:
+    uint32_t _ip;
+    uint32_t _mask;
+    std::optional<Address> _next_hop;
+    int _interface_num;
+    RouteEntry(uint32_t ip, uint32_t mask, std::optional<Address> next_hop, int interface_num)
+        : _ip(ip), _mask(mask), _next_hop(next_hop), _interface_num(interface_num) {}
+    bool match(uint32_t ip) const {
+        if ((ip & _mask) == (_ip & _mask)) {
+            return true;
+        }
+        return false;
+    }
+    friend bool operator==(const RouteEntry &a, const RouteEntry &b) {
+        return (a._ip & a._mask) == (b._ip & b._mask) && a._mask == b._mask;
+    }
+};
+using RouterTable = std::list<RouteEntry>;
 //! \brief A wrapper for NetworkInterface that makes the host-side
 //! interface asynchronous: instead of returning received datagrams
 //! immediately (from the `recv_frame` method), it stores them for
@@ -48,6 +70,8 @@ class Router {
     //! as specified by the route with the longest prefix_length that matches the
     //! datagram's destination address.
     void route_one_datagram(InternetDatagram &dgram);
+    RouterTable _router_table{};
+    RouterTable::const_iterator match_router_table(uint32_t ip) const;
 
   public:
     //! Add an interface to the router
