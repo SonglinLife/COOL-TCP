@@ -11,6 +11,7 @@
 #include <string>
 #include <system_error>
 #include <vector>
+#include <array>
 
 //! std::system_error plus the name of what was being attempted
 class tagged_error : public std::system_error {
