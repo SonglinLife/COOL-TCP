@@ -2,6 +2,9 @@ cmake_minimum_required (VERSION 2.8.5)
 cmake_policy (SET CMP0054 NEW)
 project (Sponge)
 
+SET(CLANG_FORMAT clang-format)
+SET(CLANG_TIDY clang-tidy)
+
 include (etc/build_defs.cmake)
 include (etc/build_type.cmake)
 include (etc/cflags.cmake)

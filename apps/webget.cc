@@ -23,9 +23,8 @@ void get_URL(const string &host, const string &path) {
     //    cerr << "Warning: get_URL() has not been implemented yet.\n";
 
     stringstream hdrs;
-    hdrs << "GET " << path << " HTTP/1.1" << HTTP_ENDLINE
-         << "Host: " << host << HTTP_ENDLINE
-         << "Connection: close" << HTTP_ENDLINE << HTTP_ENDLINE;
+    hdrs << "GET " << path << " HTTP/1.1" << HTTP_ENDLINE << "Host: " << host << HTTP_ENDLINE << "Connection: close"
+         << HTTP_ENDLINE << HTTP_ENDLINE;
     const string headers = hdrs.str();
 
     TCPSocket sock;
