@@ -1,6 +1,11 @@
 #ifndef SPONGE_LIBSPONGE_BYTE_STREAM_HH
 #define SPONGE_LIBSPONGE_BYTE_STREAM_HH
 
+#include <cstdint>
+#include <deque>
+#include <memory>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 
 //! \brief An in-order byte stream.
@@ -9,6 +14,8 @@
 //! side.  The byte stream is finite: the writer can end the input,
 //! and then no more bytes can be written.
 class ByteStream {
+    using u_bytes_sequence_type = std::deque<u_int8_t>;
+
   private:
     // Your code here -- add private members as necessary.
 
@@ -18,6 +25,14 @@ class ByteStream {
     // different approaches.
 
     bool _error{};  //!< Flag indicating that the stream suffered an error.
+    bool input_ended_count = false;
+    size_t total_bytes_written_count = 0;
+    size_t total_bytes_read_count = 0;
+    size_t u_buffer_capacity{};
+    std::unique_ptr<u_bytes_sequence_type> u_buffer;
+
+    void write_buffer_safe(size_t) const;
+    void read_buffer_safe(size_t) const;
 
   public:
     //! Construct a stream with room for `capacity` bytes.
