@@ -3,12 +3,14 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
 
 using namespace std;
 
+const string HTTP_ENDLINE = "\r\n";
+
 void get_URL(const string &host, const string &path) {
     // Your code here.
-
     // You will need to connect to the "http" service on
     // the computer whose name is in the "host" string,
     // then request the URL path given in the "path" string.
@@ -18,7 +20,25 @@ void get_URL(const string &host, const string &path) {
     // the "eof" (end of file).
 
     cerr << "Function called: get_URL(" << host << ", " << path << ").\n";
-    cerr << "Warning: get_URL() has not been implemented yet.\n";
+    //    cerr << "Warning: get_URL() has not been implemented yet.\n";
+
+    stringstream hdrs;
+    hdrs << "GET " << path << " HTTP/1.1" << HTTP_ENDLINE
+         << "Host: " << host << HTTP_ENDLINE
+         << "Connection: close" << HTTP_ENDLINE << HTTP_ENDLINE;
+    const string headers = hdrs.str();
+
+    TCPSocket sock;
+    sock.connect(Address(host, "http"));
+    sock.write(headers);
+
+    while (!sock.eof()) {
+        string recvd = sock.read();
+        cout << recvd;
+    }
+
+    sock.close();
+
 }
 
 int main(int argc, char *argv[]) {
